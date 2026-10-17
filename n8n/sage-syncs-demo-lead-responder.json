@@ -1,0 +1,306 @@
+{
+  "name": "Sage Syncs Demo - AI Lead Responder (WhatsApp)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Sage Syncs demo: AI lead responder\n\n**Path 1 (top):** Tally form submitted -> AI writes the first message -> WhatsApp sent.\n**Path 2 (bottom):** Lead replies on WhatsApp -> AI answers -> WhatsApp sent. STOP ends the conversation.\n\n**Before activating:**\n1. Claude HTTP node: create a *Header Auth* credential, name `x-api-key`, value = your Anthropic API key.\n2. Both Twilio nodes: create a *Twilio* credential (Account SID + Auth Token).\n3. Activate the workflow, then paste the **Production** URLs into Tally (new lead) and Twilio Sandbox \"When a message comes in\" (incoming).\n\nConversations are stored in workflow static data, which only saves on **production** runs (workflow active), not on manual test runs.",
+        "height": 380,
+        "width": 520
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000001",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, -420]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sagesyncs-new-lead",
+        "options": {}
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000002",
+      "name": "New lead (Tally webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "5a3c9f40-7d1b-4b7e-8f2a-1c2d3e4f5a60"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull name, phone and message out of the Tally submission.\n// Field labels in Tally should contain the words: Name, Phone, Message.\nconst body = $input.first().json.body || {};\nconst fields = (body.data && body.data.fields) || [];\nconst get = (word) => {\n  const f = fields.find(x => String(x.label || '').toLowerCase().includes(word));\n  return f ? String(f.value ?? '').trim() : '';\n};\n\nconst name = get('name');\nconst message = get('message');\nlet phone = get('phone').replace(/[^\\d+]/g, '');\nif (!phone) throw new Error('No phone number in the form submission');\nif (!phone.startsWith('+')) phone = '+' + phone;\n\nconst store = $getWorkflowStaticData('global');\nstore.convos = store.convos || {};\nstore.convos[phone] = {\n  name,\n  status: 'active',\n  history: [{\n    role: 'user',\n    content: `New lead from the website form. Name: ${name || 'unknown'}. Message: ${message || '(no message)'}`\n  }]\n};\n\nreturn [{ json: { phone, messages: store.convos[phone].history } }];"
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000003",
+      "name": "Parse Tally lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sagesyncs-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000004",
+      "name": "Incoming WhatsApp (Twilio webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "8e1f2a3b-4c5d-4e6f-9a0b-1c2d3e4f5a61"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<Response></Response>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/xml"
+              }
+            ]
+          }
+        }
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000005",
+      "name": "Reply OK to Twilio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Twilio sends From like 'whatsapp:+2348012345678' and the text in Body.\nconst b = $input.first().json.body || {};\nconst phone = String(b.From || '').replace('whatsapp:', '');\nconst text = String(b.Body || '').trim();\nif (!phone || !text) return [];\n\nconst store = $getWorkflowStaticData('global');\nstore.convos = store.convos || {};\nlet convo = store.convos[phone];\nif (!convo) {\n  convo = { name: '', status: 'active', history: [] };\n  store.convos[phone] = convo;\n}\n\n// Already opted out: send nothing.\nif (convo.status === 'stopped') return [];\n\n// Opt-out words: reply once, then stop for good.\nif (/^(stop|unsubscribe|wrong number|cancel|end|quit)$/i.test(text)) {\n  convo.status = 'stopped';\n  return [{ json: { action: 'stop', phone, reply: \"Understood, you won't hear from us again.\" } }];\n}\n\nconvo.history.push({ role: 'user', content: text });\nreturn [{ json: { action: 'ai', phone, messages: convo.history } }];"
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000006",
+      "name": "Handle incoming message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c7d1e2f3-0a1b-4c2d-8e3f-4a5b6c7d8e90",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "ai",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000007",
+      "name": "Needs AI reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Edit the assistant's instructions and listing sheet here.\nconst SYSTEM_PROMPT = `You are Sage, the text assistant for Jordan Reed at Demo Realty in Austin, Texas. A new lead just asked about a home. Your job: reply fast, be warm, learn their budget, timeline, area and must-haves, then offer a short call with Jordan.\n\nStyle:\n- Text like a friendly human assistant. Max 2 short sentences per message. No emojis. Don't use exclamation marks in every line.\n- Ask one question at a time.\n- Sometimes mirror one key detail back so they feel heard, but don't start every message with it, and never say \"got it\" twice in a row.\n\nRules you never break:\n- Only state facts that are in the listing sheet below. If you don't know, say \"Let me check with Jordan and get right back to you.\"\n- Never promise a price, discount, availability, approval, or legal or financial advice.\n- Fair housing: never describe or steer by race, religion, national origin, sex, disability, family status or similar. Don't call an area \"safe\", \"good for families\" or rate schools. Instead, suggest they check public sources or ask Jordan.\n- If they ask whether you are a bot or AI, say yes, honestly: \"I'm an AI assistant for Jordan. Happy to get them on the phone.\"\n- When they agree to a call, send this link: calendly.com/demo-realty/15min and say Jordan will be on it.\n- The first message in the conversation is a form submission. Reply to it as the opening text message to that lead, using their first name.\n\nReply only with the text message itself, nothing else.\n\nLISTING SHEET - DEMO REALTY (Austin, TX)\n1) 12 Maple Street: $395,000. 3 bed / 2 bath, 1,650 sq ft. Fenced backyard: yes. Pets: dogs and cats allowed. Status: available. Showings Mon-Sat 10am-6pm. Updated kitchen, 2-car garage, 15 min to downtown.\n2) 48 Oak Ridge Drive: $520,000. 4 bed / 3 bath, 2,300 sq ft. Fenced backyard: yes. Pets: yes. Status: available. Showings by appointment. Home office, pool, corner lot.\n3) 7 Cedar Lane, Unit 4: $289,000. 2 bed / 2 bath condo, 1,050 sq ft. No private yard (shared courtyard). Pets: cats only, max 1. Status: under contract, backup offers accepted. HOA $280/month, gym and pool access.`;\n\nconst { phone, messages } = $input.first().json;\n\nreturn [{\n  json: {\n    phone,\n    body: {\n      model: 'claude-opus-5-5',\n      max_tokens: 2000,\n      output_config: { effort: 'low' },\n      fallbacks: 'default',\n      system: SYSTEM_PROMPT,\n      messages\n    }\n  }\n}];"
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000008",
+      "name": "Prepare Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000009",
+      "name": "Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Take the text reply out of Claude's response and save it to the conversation.\nconst res = $input.first().json;\nconst phone = $('Prepare Claude request').first().json.phone;\nconst FALLBACK = 'Let me check with Jordan and get right back to you.';\n\nlet reply = '';\nif (res.stop_reason !== 'refusal') {\n  reply = (res.content || [])\n    .filter(b => b.type === 'text')\n    .map(b => b.text)\n    .join('')\n    .trim();\n}\n\nconst store = $getWorkflowStaticData('global');\nconst convo = store.convos && store.convos[phone];\nif (convo) {\n  // Save Claude's full content (including thinking blocks) unchanged, so later turns stay valid.\n  if (reply) {\n    convo.history.push({ role: 'assistant', content: res.content });\n  } else {\n    convo.history.push({ role: 'assistant', content: FALLBACK });\n  }\n}\n\nreturn [{ json: { phone, reply: reply || FALLBACK } }];"
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000010",
+      "name": "Extract reply and save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 0]
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $json.phone }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.reply }}",
+        "options": {}
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000011",
+      "name": "Send WhatsApp reply",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1560, 0]
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $json.phone }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.reply }}",
+        "options": {}
+      },
+      "id": "0b1e7d2a-1f0a-4c1e-9a10-000000000012",
+      "name": "Send STOP confirmation",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [900, 420]
+    }
+  ],
+  "connections": {
+    "New lead (Tally webhook)": {
+      "main": [
+        [
+          {
+            "node": "Parse Tally lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Tally lead": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incoming WhatsApp (Twilio webhook)": {
+      "main": [
+        [
+          {
+            "node": "Reply OK to Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply OK to Twilio": {
+      "main": [
+        [
+          {
+            "node": "Handle incoming message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle incoming message": {
+      "main": [
+        [
+          {
+            "node": "Needs AI reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs AI reply?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send STOP confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "main": [
+        [
+          {
+            "node": "Extract reply and save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract reply and save": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
