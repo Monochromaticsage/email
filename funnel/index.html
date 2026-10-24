@@ -55,7 +55,7 @@ img,canvas{max-width:100%}
 
 /* Hero */
 .hero{position:relative;min-height:min(90svh,880px);display:flex;align-items:center;overflow:hidden}
-#stage{position:absolute;inset:0;z-index:0;cursor:grab;touch-action:pan-y;background:#2a2f5e}
+#stage{position:relative;height:min(68svh,600px);border-radius:22px;overflow:hidden;cursor:grab;touch-action:pan-y;background:#2a2f5e}
 #stage canvas{display:block;width:100%;height:100%}
 #stage:active{cursor:grabbing}
 .stage-note{position:absolute;right:1rem;bottom:1rem;margin:0;font-size:.85rem;color:#E9EAF7;background:rgba(17,20,46,.55);padding:.35rem .75rem;border-radius:999px;pointer-events:none}
@@ -72,9 +72,22 @@ h1{font-family:var(--display);font-weight:780;font-size:clamp(2.5rem,5.6vw,4.6re
 @media (max-width:820px){
   .hero{display:block;min-height:0}
   #stage{position:relative;height:52svh;min-height:300px}
-  .scrim{display:none}
-  .hero-copy{padding-top:1.75rem}
 }
+
+/* Video-first hero */
+.hero2{max-width:60rem;margin:0 auto;padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4vw,3rem) clamp(2.5rem,5vw,4rem);text-align:center}
+.hero2 h1{max-width:18ch;margin-left:auto;margin-right:auto}
+.hero2 .lede{margin-left:auto;margin-right:auto}
+.eyebrow{display:inline-block;background:var(--surface);border:1px solid var(--line);color:var(--indigo);font-weight:700;font-size:.85rem;padding:.35rem .85rem;border-radius:999px;margin:0 0 1.25rem}
+.hero2 .video-frame{margin:0 auto 1.75rem;box-shadow:0 24px 60px rgba(28,31,59,.16)}
+.cta-row{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center}
+.safe-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}
+.safe-list li{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1.1rem 1.2rem 1.1rem 3.2rem;position:relative}
+.safe-list li::before{content:"✓";position:absolute;left:1.1rem;top:1.05rem;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--signal);color:var(--signal-ink);display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.safe-list b{display:block;font-family:var(--display);font-size:1.1rem}
+.safe-list span{color:var(--muted);font-size:.95rem}
+.walk-grid{display:grid;grid-template-columns:minmax(16rem,22rem) 1fr;gap:2rem;align-items:center}
+@media (max-width:820px){.walk-grid{grid-template-columns:1fr}}
 
 /* Sections */
 section.band{padding:clamp(3.5rem,8vw,6.5rem) clamp(1rem,4vw,3rem);max-width:72rem;margin:0 auto}
@@ -117,7 +130,7 @@ h2{font-family:var(--display);font-weight:740;font-size:clamp(1.9rem,3.6vw,2.9re
 footer{padding:2rem clamp(1rem,4vw,3rem);color:var(--muted);font-size:.9rem;border-top:1px solid var(--line)}
 
 /* Live demo */
-body.live #stage{position:fixed;inset:0;height:auto;min-height:0;z-index:50;touch-action:none}
+body.live #stage{position:fixed;inset:0;height:auto;min-height:0;z-index:50;touch-action:none;border-radius:0}
 body.live .stage-note{display:none}
 #hud{position:fixed;inset:0;z-index:60;pointer-events:none;color:var(--hud-ink);font-family:var(--body)}
 #hud[hidden]{display:none}
@@ -174,7 +187,8 @@ body.live .stage-note{display:none}
 <header class="top">
   <a class="brand" href="#top">SageSyncs</a>
   <nav aria-label="Page sections">
-    <a href="#video">Watch the real system</a>
+    <a href="#safe">Safeguards</a>
+    <a href="#walk">3D walkthrough</a>
     <a href="#how">How it works</a>
     <a href="#faq">Questions</a>
   </nav>
@@ -182,45 +196,48 @@ body.live .stage-note{display:none}
 </header>
 
 <main id="top">
-  <section class="hero">
-    <div id="stage" role="img" aria-label="3D preview of a small town at dusk with your team name on the office sign">
-      <p class="stage-note" id="stageNote">Drag the town to look around</p>
-    </div>
-    <div class="scrim" aria-hidden="true"></div>
-    <div class="hero-copy">
-      <h1>It’s 11:47 PM. A buyer just asked about your listing.</h1>
-      <p class="lede">See what happens when every new lead gets a reply in under a minute, even while you’re asleep or at a showing. A 3-minute walkthrough with your name on the sign.</p>
-      <form id="demoForm" class="demo-form" autocomplete="off">
-        <label>Your name or team<input id="fBiz" maxlength="36" placeholder="The Reed Team"></label>
-        <label>Your city<input id="fTown" maxlength="28" placeholder="Austin"></label>
-        <input type="hidden" id="fInd" value="realestate">
-        <button class="btn" type="submit" id="startBtn">Start the 3-minute demo</button>
-      </form>
-      <p class="fine">Nothing you type is saved or sent. <a href="#video">Prefer to watch the real system?</a></p>
-    </div>
-  </section>
-
-  <section class="band video-band" id="video">
-    <h2>Watch the real system answer a lead.</h2>
-    <p class="intro">A screen recording of the actual setup: a lead form is filled in, and the reply lands on a phone in under a minute.</p>
+  <section class="hero2">
+    <p class="eyebrow">For real estate agents and teams</p>
+    <h1>Every new lead gets a reply in under a minute. Even at 11:47 PM.</h1>
+    <p class="lede">A text assistant that answers your new leads, asks budget, timeline and area, and books the call for you. Set up and looked after by Sage Syncs.</p>
     <div class="video-frame" id="videoFrame">
-      <div class="video-empty"><span class="play-dot" aria-hidden="true"></span><strong>Demo video coming soon</strong><span>In the meantime, try the 3D walkthrough above or book a call to see it live.</span></div>
+      <div class="video-empty"><span class="play-dot" aria-hidden="true"></span><strong>Demo video coming soon</strong><span>Watch a lead form get a reply on a real phone in under a minute.</span></div>
     </div>
+    <div class="cta-row">
+      <a class="btn" data-book href="#">Book a free fit call</a>
+      <a class="btn btn-quiet" href="#walk">Try the 3D walkthrough</a>
+    </div>
+    <p class="fine">No pitch deck. We look at how your leads are handled today, and I tell you straight if this fits.</p>
   </section>
 
-  <section class="band" id="stops">
-    <h2>One lead, from first message to booked call.</h2>
-    <p class="intro">The walkthrough plays these moments in order, in your city, with your name on the office sign. Names and numbers are examples.</p>
-    <ol class="timeline">
-      <li><time>11:47 PM</time><div><h3>A buyer asks about a listing</h3><p>A lead from Zillow, Facebook or your website reaches out after hours.</p></div></li>
-      <li><time>11:47 PM</time><div><h3>You’re asleep, or at a showing</h3><p>This is the moment leads go cold and message the next agent.</p></div></li>
-      <li><time>Under a minute</time><div><h3>Answered right away</h3><p>In your tone, using only listing details you approve, asking budget, timeline and area.</p></div></li>
-      <li><time>11:51 PM</time><div><h3>Qualified and logged</h3><p>Their answers land in your CRM, so nobody retypes anything.</p></div></li>
-      <li><time>11:53 PM</time><div><h3>Call booked</h3><p>They pick a time on your calendar, and you get a heads-up. You take the call.</p></div></li>
-      <li><time>Optional add-on</time><div><h3>Old leads get a check-in</h3><p>Past leads who agreed to hear from you get a short, friendly follow-up.</p></div></li>
-      <li><time>Every week</time><div><h3>A plain-English report</h3><p>Leads answered, reply time and calls booked. Weekly for the first month, then monthly.</p></div></li>
-      <li><time>Day 30</time><div><h3>You decide</h3><p>Keep it, change it, or stop. Not useful? I switch it off and refund the monthly fee.</p></div></li>
-    </ol>
+  <section class="band" id="safe">
+    <h2>Built to keep you out of trouble.</h2>
+    <p class="intro">It only answers from information you approve, and anything tricky goes straight to you. For the first two weeks I read every conversation myself.</p>
+    <ul class="safe-list">
+      <li><b>No promises it can’t keep</b><span>Never quotes prices, discounts or terms you haven’t approved.</span></li>
+      <li><b>Fair-housing safe</b><span>Never rates neighborhoods, safety or schools. It points leads to public sources or to you.</span></li>
+      <li><b>Respects STOP</b><span>Anyone who texts STOP is removed immediately. Texts only at reasonable hours.</span></li>
+      <li><b>Honest about being AI</b><span>If asked, it says it’s your assistant and offers to get you on the phone.</span></li>
+    </ul>
+  </section>
+
+  <section class="band" id="walk">
+    <div class="walk-grid">
+      <div>
+        <h2>See your next 30 days in 3D.</h2>
+        <p class="intro" style="margin-bottom:1.25rem">An interactive walkthrough of one lead, from a late-night message to a booked call, with your name on the office sign. Names and numbers are examples.</p>
+        <form id="demoForm" class="demo-form" autocomplete="off">
+          <label>Your name or team<input id="fBiz" maxlength="36" placeholder="The Reed Team"></label>
+          <label>Your city<input id="fTown" maxlength="28" placeholder="Austin"></label>
+          <input type="hidden" id="fInd" value="realestate">
+          <button class="btn" type="submit" id="startBtn">Start the 3-minute walkthrough</button>
+        </form>
+        <p class="fine">Nothing you type is saved or sent.</p>
+      </div>
+      <div id="stage" role="img" aria-label="3D preview of a small town at dusk with your team name on the office sign">
+        <p class="stage-note" id="stageNote">Drag the town to look around</p>
+      </div>
+    </div>
   </section>
 
   <div class="how">
@@ -253,7 +270,7 @@ body.live .stage-note{display:none}
     <p class="creds">Top Rated Plus on Upwork · 100% Job Success · 50+ automation projects · n8n Certified Expert Partner</p>
     <p class="intro">Hi, I’m Sage. I’m working with a small number of agents right now, so every setup gets my full attention. Book a short call: you tell me how leads are handled today, I show you the system live, and you decide.</p>
     <div class="row">
-      <button class="btn" type="button" id="startBtn2">Start the demo</button>
+      <button class="btn" type="button" id="startBtn2">Try the 3D walkthrough</button>
       <a class="btn btn-quiet" data-book href="#">Book a free fit call</a>
     </div>
   </section>
@@ -325,8 +342,8 @@ try {
 } catch (e) { renderer = null; }
 
 if (!renderer || typeof THREE === "undefined") {
-  stage.innerHTML = '<p class="fallback">Your browser can’t show the 3D version. The walkthrough below covers the same moments.</p>';
-  const goRead = e => { e.preventDefault(); document.getElementById("stops").scrollIntoView(); };
+  stage.innerHTML = '<p class="fallback">Your browser can’t show the 3D version. The video above shows the real system.</p>';
+  const goRead = e => { e.preventDefault(); document.getElementById("top").scrollIntoView(); };
   $("#demoForm").addEventListener("submit", goRead);
   $("#startBtn2").addEventListener("click", goRead);
   return;
